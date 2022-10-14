@@ -16,9 +16,7 @@ export default class SortableTable {
     {
       url = "",
       sorted = {
-        id: headerConfig.find(function (item) {
-          return item.sortable;
-        }).id,
+        id: headerConfig.find((item) => item.sortable).id,
         order: "asc",
       },
       isSortLocally = false,
@@ -54,17 +52,8 @@ export default class SortableTable {
       const newOrder = toggleOrder(order);
       this.sorted = { id, order: newOrder };
 
-      // const sortedData = this.sortData(id, newOrder);
-      // const arrow = column.querySelector(".sortable-table__sort-arrow");
-
       column.dataset.order = newOrder;
-      column.append(this.subElements.arrow); // --
-
-      // if (!arrow) {
-      //   column.append(this.subElements.arrow);
-      // }
-
-      // this.subElements.body.innerHTML = this.getTemplateTableRows(sortedData);
+      column.append(this.subElements.arrow); // add arrow from cache to column
 
       if (this.isSortLocally) {
         this.sortOnClient(id, newOrder);
@@ -90,8 +79,11 @@ export default class SortableTable {
       this.loading = true;
 
       const data = await this.loadData(id, order, this.start, this.end);
+      const rows = document.createElement("div");
 
-      this.update(data);
+      this.data = [...this.data, ...data];
+      rows.innerHTML = this.getTemplateTableRows(data);
+      this.subElements.body.append(...rows.childNodes);
 
       this.loading = false;
     }
@@ -137,11 +129,11 @@ export default class SortableTable {
     this.renderRows(data);
   }
 
-  getTemplate(data = this.data) {
+  get template() {
     return `
       <div class="sortable-table">
         ${this.templateTableHeader}
-        ${this.getTemplateTableBody(data)}
+        ${this.getTemplateTableBody(this.data)}
       </div>
 
       <div data-element="loading" class="loading-line sortable-table__loading-line"></div>
@@ -224,7 +216,7 @@ export default class SortableTable {
     const wrapper = document.createElement("div");
     const { id, order } = this.sorted;
 
-    wrapper.innerHTML = this.getTemplate();
+    wrapper.innerHTML = this.template;
     this.element = wrapper.firstElementChild;
     this.subElements = this.getSubElements(this.element);
 
@@ -237,11 +229,9 @@ export default class SortableTable {
   }
 
   renderRows(data) {
-    if (data && data.length) {
+    if (Array.isArray(data) && data.length) {
       this.element.classList.remove("sortable-table_empty");
-      this.subElements.body.innerHTML = this.getTemplateTableRows(
-        (this.data = data)
-      );
+      this.update(data);
     } else {
       this.element.classList.add("sortable-table_empty");
     }
@@ -263,12 +253,8 @@ export default class SortableTable {
   }
 
   update(data) {
-    const rows = document.createElement("div");
-
-    this.data = [...this.data, ...data]; // this.data.concat(data)
-    rows.innerHTML = this.getTemplateTableRows(data);
-
-    this.subElements.body.append(...rows.childNodes);
+    this.data = data;
+    this.subElements.body.innerHTML = this.getTemplateTableRows(data);
   }
 
   initEventListeners() {
